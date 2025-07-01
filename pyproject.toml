@@ -1,11 +1,11 @@
 [project]
 name = "html_hoster"
-version = "1.0.0"
+version = "0.3.0"
 description = "一个简单优雅的静态网站托管平台，支持快速部署 HTML 网站到阿里云 OSS"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "sivdead", email = "923396178@qq.com"},
 ]
 keywords = ["html", "hosting", "oss", "flask", "static-site"]
 classifiers = [
