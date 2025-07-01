@@ -15,7 +15,7 @@ RUN pip install --upgrade pip -i https://mirrors.cloud.tencent.com/pypi/simple/ 
     && pip install uv -i https://mirrors.cloud.tencent.com/pypi/simple/
 
 # 使用 uv 安装依赖（镜像源已在 pyproject.toml 中配置）
-RUN uv sync --frozen --no-dev \
+RUN uv pip install -e . --python $(which python) \
     && rm -rf /root/.cache/uv
 
 # 设置环境变量
@@ -26,4 +26,4 @@ ENV FLASK_ENV=production
 EXPOSE 5000
 
 # 启动应用
-CMD ["uv", "run", "python", "-m", "html_hoster"]
+CMD ["python", "-m", "html_hoster"]
