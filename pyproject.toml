@@ -1,0 +1,21 @@
+
+[project]
+name = "html_hoster"
+version = "0.1.0"
+description = "A simple web app to host static HTML sites on Aliyun OSS."
+requires-python = ">=3.10"
+dependencies = [
+    "flask",
+    "oss2",
+    "python-dotenv",
+    "waitress",
+    "Flask-SQLAlchemy",
+    "SQLAlchemy",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

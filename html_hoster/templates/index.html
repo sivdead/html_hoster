@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Hoster</title>
+    <style>
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: #fff;
+            margin: 3em auto;
+            padding: 2.5em 2em 2em 2em;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+            max-width: 600px;
+            width: 95%;
+        }
+        h1 {
+            font-size: 2.6em;
+            color: #2d3a4b;
+            text-align: center;
+            margin-bottom: 0.5em;
+            letter-spacing: 2px;
+        }
+        h2 {
+            color: #3b4a5a;
+            font-size: 1.3em;
+            margin-top: 2em;
+            margin-bottom: 1em;
+            text-align: left;
+        }
+        .upload-form {
+            background: #f3f8ff;
+            border: 1.5px solid #b6d0f7;
+            border-radius: 10px;
+            padding: 1.5em 1em 1em 1em;
+            margin-bottom: 2em;
+            text-align: center;
+        }
+        .upload-form input[type="file"] {
+            border: 1px solid #b6d0f7;
+            padding: 0.7em;
+            border-radius: 6px;
+            margin-right: 1em;
+            background: #fff;
+            cursor: pointer;
+            width: 60%;
+            max-width: 260px;
+        }
+        .upload-form button {
+            background: linear-gradient(90deg, #4f8cff 0%, #38c6ff 100%);
+            color: #fff;
+            padding: 0.7em 1.7em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.08em;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(79, 140, 255, 0.08);
+            transition: background 0.2s;
+        }
+        .upload-form button:hover {
+            background: linear-gradient(90deg, #38c6ff 0%, #4f8cff 100%);
+        }
+        .site-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .site-list li {
+            background: #f7fafd;
+            border: 1px solid #e3eaf2;
+            padding: 1em 1.5em;
+            margin-bottom: 1em;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(79, 140, 255, 0.04);
+            transition: transform 0.18s, box-shadow 0.18s;
+        }
+        .site-list li:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 6px 18px rgba(79, 140, 255, 0.10);
+        }
+        .site-list li span {
+            font-weight: 600;
+            color: #2d3a4b;
+            font-size: 1.08em;
+        }
+        .site-list li a {
+            color: #4f8cff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.08em;
+            margin-right: 0.7em;
+            border-bottom: 1.5px solid #4f8cff33;
+            transition: color 0.18s, border 0.18s;
+        }
+        .site-list li a:last-child {
+            margin-right: 0;
+        }
+        .site-list li a:hover {
+            color: #38c6ff;
+            border-bottom: 2px solid #38c6ff;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 1em; }
+            .site-list li { flex-direction: column; align-items: flex-start; }
+            .site-list li div { margin-top: 0.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HTML Hoster</h1>
+        <div class="upload-form">
+            <h2>Upload a new site</h2>
+            <form action="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".zip" required>
+                <button type="submit">Upload</button>
+            </form>
+        </div>
+        <div class="site-list">
+            <h2>Published Sites</h2>
+            <ul>
+                {% for site in sites %}
+                <li data-site-id="{{ site.name }}">
+                    <span class="site-title" style="font-weight:bold;">{{ site.name }}</span>
+                    <div>
+                        <a href="/site/{{ site.id }}/index.html" target="_blank" style="margin-right:1em;">预览</a>
+                        <a href="{{ site.oss_url }}" target="_blank" style="margin-right:1em;">OSS直链</a>
+                        <button class="rename-btn" style="margin-right:0.5em;">重命名</button>
+                        <button class="delete-btn" style="color:#fff;background:#ff4d4f;border:none;border-radius:5px;padding:0.4em 1em;cursor:pointer;">删除</button>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <script>
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = function() {
+                const li = btn.closest('li');
+                const siteId = li.getAttribute('data-site-id');
+                if(confirm('确定要删除该站点吗？')) {
+                    fetch(`/delete_site/${encodeURIComponent(siteId)}`, {method:'POST'})
+                    .then(r=>r.json()).then(data=>{
+                        if(data.success) li.remove();
+                        else alert(data.msg||'删除失败');
+                    });
+                }
+            };
+        });
+        document.querySelectorAll('.rename-btn').forEach(btn => {
+            btn.onclick = function() {
+                const li = btn.closest('li');
+                const siteId = li.getAttribute('data-site-id');
+                const titleSpan = li.querySelector('.site-title');
+                const newName = prompt('输入新站点名称', titleSpan.textContent.trim());
+                if(newName && newName.trim() && newName.trim()!==titleSpan.textContent.trim()){
+                    const fd = new FormData();
+                    fd.append('new_name', newName.trim());
+                    fetch(`/rename_site/${encodeURIComponent(siteId)}`, {method:'POST', body:fd})
+                    .then(r=>r.json()).then(data=>{
+                        if(data.success) {
+                            titleSpan.textContent = data.new_name;
+                            li.setAttribute('data-site-id', data.new_name);
+                        } else alert(data.msg||'重命名失败');
+                    });
+                }
+            };
+        });
+        </script>
+    </div>
+</body>
+</html>
