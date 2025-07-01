@@ -23,6 +23,7 @@ RUN uv pip install -e . --python $(which python) \
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=production
+ENV STORAGE_TYPE=oss
 
 # 暴露端口
 EXPOSE 5000

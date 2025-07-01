@@ -3,12 +3,12 @@ import uuid
 import zipfile
 import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-import oss2
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import mimetypes
 import pymysql
+from html_hoster.storage import get_storage_service
 
 # 设置 PyMySQL 作为 mysqlclient 的替代
 pymysql.install_as_MySQLdb()
@@ -57,19 +57,12 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB 最大上传大小
 
 db = SQLAlchemy(app)
 
-# OSS Configuration
-OSS_ACCESS_KEY_ID = os.getenv("OSS_ACCESS_KEY_ID")
-OSS_ACCESS_KEY_SECRET = os.getenv("OSS_ACCESS_KEY_SECRET")
-OSS_ENDPOINT = os.getenv("OSS_ENDPOINT")
-OSS_BUCKET_NAME = os.getenv("OSS_BUCKET_NAME")
-OSS_PREFIX = "html_hoster/sites"
-
 # 确保上传目录存在
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
-auth = oss2.Auth(OSS_ACCESS_KEY_ID, OSS_ACCESS_KEY_SECRET)
-bucket = oss2.Bucket(auth, OSS_ENDPOINT, OSS_BUCKET_NAME)
+# 初始化存储服务
+storage = get_storage_service()
 
 
 class Site(db.Model):
@@ -160,21 +153,21 @@ def paste_site():
         with open(index_html_path, "w", encoding="utf-8") as f:
             f.write(html_code)
         
-        # 上传到OSS
-        oss_path = os.path.join(OSS_PREFIX, site_id, "index.html").replace("\\", "/")
+        # 上传到存储服务
+        remote_path = f"{site_id}/index.html"
         try:
-            bucket.put_object_from_file(oss_path, index_html_path)
-            logging.info(f"成功上传粘贴的HTML到OSS: {oss_path}")
+            storage.upload_file(index_html_path, remote_path)
+            logging.info(f"成功上传粘贴的HTML到存储服务: {remote_path}")
         except Exception as e:
-            logging.error(f"OSS上传失败: {e}")
+            logging.error(f"存储服务上传失败: {e}")
             # 清理临时文件
             os.remove(index_html_path)
             os.rmdir(extract_path)
             return jsonify({"success": False, "msg": "上传到云存储失败"}), 500
         
         # 保存到数据库
-        oss_url = f"https://{OSS_BUCKET_NAME}.{OSS_ENDPOINT}/{OSS_PREFIX}/{site_id}/index.html"
-        new_site = Site(name=site_name, oss_url=oss_url, id=site_id)
+        site_url = storage.get_site_url(site_id)
+        new_site = Site(name=site_name, oss_url=site_url, id=site_id)
         db.session.add(new_site)
         db.session.commit()
         
@@ -264,31 +257,30 @@ def upload_file():
             if not index_html_path:
                 raise ValueError("ZIP包中没有找到index.html文件")
             
-            # 上传到OSS
+            # 上传到存储服务
             uploaded_files = 0
             for root, dirs, files in os.walk(extract_path):
                 for filename in files:
                     local_path = os.path.join(root, filename)
                     # 计算相对路径
                     relative_path = os.path.relpath(local_path, extract_path)
-                    oss_path = os.path.join(OSS_PREFIX, site_id, relative_path).replace("\\", "/")
+                    remote_path = f"{site_id}/{relative_path}"
+                    
+                    # 设置Content-Type
+                    content_type, _ = mimetypes.guess_type(filename)
                     
                     try:
-                        # 设置Content-Type
-                        content_type, _ = mimetypes.guess_type(filename)
-                        headers = {'Content-Type': content_type} if content_type else {}
-                        
-                        bucket.put_object_from_file(oss_path, local_path, headers=headers)
+                        storage.upload_file(local_path, remote_path, content_type)
                         uploaded_files += 1
-                        logging.info(f"上传文件到OSS: {oss_path}")
+                        logging.info(f"上传文件到存储服务: {remote_path}")
                     except Exception as e:
                         logging.error(f"上传文件失败 {local_path}: {e}")
             
-            logging.info(f"成功上传 {uploaded_files} 个文件到OSS")
+            logging.info(f"成功上传 {uploaded_files} 个文件到存储服务")
             
             # 保存到数据库
-            oss_url = f"https://{OSS_BUCKET_NAME}.{OSS_ENDPOINT}/{OSS_PREFIX}/{site_id}/index.html"
-            new_site = Site(name=site_name, oss_url=oss_url, id=site_id)
+            site_url = storage.get_site_url(site_id)
+            new_site = Site(name=site_name, oss_url=site_url, id=site_id)
             db.session.add(new_site)
             db.session.commit()
             
@@ -296,13 +288,13 @@ def upload_file():
             
         except Exception as e:
             logging.error(f"处理上传文件失败: {e}")
-            # 清理OSS上已上传的文件
+            # 清理存储服务上已上传的文件
             try:
-                prefix = os.path.join(OSS_PREFIX, site_id).replace("\\", "/")
-                for obj in oss2.ObjectIterator(bucket, prefix=prefix):
-                    bucket.delete_object(obj.key)
-            except:
-                pass
+                files = storage.list_files(site_id)
+                for file_path in files:
+                    storage.delete_file(f"{site_id}/{file_path}")
+            except Exception as delete_err:
+                logging.error(f"清理存储服务文件失败: {delete_err}")
             
             return jsonify({"success": False, "msg": str(e)}), 500
         
@@ -331,34 +323,34 @@ def upload_file():
 @app.route("/site/<site_id>/<path:filename>")
 def serve_site_file(site_id, filename):
     """提供站点静态文件访问"""
-    import mimetypes
     
     # 安全检查：防止路径遍历
     if ".." in filename or filename.startswith("/"):
         return "Forbidden", 403
     
-    oss_file_path = f"{OSS_PREFIX}/{site_id}/{filename}"
+    remote_path = f"{site_id}/{filename}"
     try:
-        # 从OSS获取文件
-        result = bucket.get_object(oss_file_path)
-        content = result.read()
+        # 从存储服务获取文件
+        content, content_type = storage.download_file(remote_path)
+        
+        if content is None:
+            logging.warning(f"文件不存在: {remote_path}")
+            return "文件不存在", 404
         
         # 设置正确的Content-Type
-        mime_type, _ = mimetypes.guess_type(filename)
-        if not mime_type:
-            if filename.endswith('.js'):
-                mime_type = 'application/javascript'
-            elif filename.endswith('.css'):
-                mime_type = 'text/css'
-            else:
-                mime_type = "application/octet-stream"
+        if not content_type:
+            content_type, _ = mimetypes.guess_type(filename)
+            if not content_type:
+                if filename.endswith('.js'):
+                    content_type = 'application/javascript'
+                elif filename.endswith('.css'):
+                    content_type = 'text/css'
+                else:
+                    content_type = "application/octet-stream"
         
-        return content, 200, {"Content-Type": mime_type}
-    except oss2.exceptions.NoSuchKey:
-        logging.warning(f"文件不存在: {oss_file_path}")
-        return "文件不存在", 404
+        return content, 200, {"Content-Type": content_type}
     except Exception as e:
-        logging.error(f"获取OSS文件失败 {oss_file_path}: {e}")
+        logging.error(f"获取存储服务文件失败 {remote_path}: {e}")
         return "服务器错误", 500
 
 
@@ -370,17 +362,17 @@ def delete_site(site_id):
         if not site:
             return jsonify({"success": False, "msg": "站点不存在"}), 404
         
-        # 删除OSS上的所有文件
-        prefix = os.path.join(OSS_PREFIX, site.id).replace("\\", "/")
+        # 删除存储服务上的所有文件
         deleted_count = 0
         
         try:
-            for obj in oss2.ObjectIterator(bucket, prefix=prefix):
-                bucket.delete_object(obj.key)
+            files = storage.list_files(site.id)
+            for file_path in files:
+                storage.delete_file(f"{site.id}/{file_path}")
                 deleted_count += 1
-            logging.info(f"从OSS删除了 {deleted_count} 个文件")
+            logging.info(f"从存储服务删除了 {deleted_count} 个文件")
         except Exception as e:
-            logging.error(f"删除OSS文件失败: {e}")
+            logging.error(f"删除存储服务文件失败: {e}")
             return jsonify({"success": False, "msg": "删除云存储文件失败"}), 500
         
         # 从数据库删除记录

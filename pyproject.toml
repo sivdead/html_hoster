@@ -33,6 +33,7 @@ dependencies = [
     "werkzeug>=2.3.0",
     "mysqlclient>=2.2.0",
     "pymysql>=1.1.0",
+    "boto3>=1.28.0",
 ]
 
 [project.optional-dependencies]

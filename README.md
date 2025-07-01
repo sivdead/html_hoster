@@ -9,7 +9,7 @@
 ## ✨ 特性
 
 - 🚀 **快速部署** - 支持 ZIP 文件上传和 HTML 代码粘贴
-- 🌐 **云端托管** - 基于阿里云 OSS 的可靠存储
+- 🌐 **云端托管** - 支持阿里云 OSS 和 S3 兼容的对象存储服务
 - 🎨 **现代化 UI** - 响应式设计，支持移动端
 - 💾 **数据持久化** - 支持 SQLite 和 MySQL 数据库
 - 🔧 **易于管理** - 支持站点重命名和删除
@@ -19,7 +19,7 @@
 
 - **后端**: Python 3.10+, Flask, SQLAlchemy
 - **前端**: HTML5, CSS3, JavaScript (原生)
-- **存储**: 阿里云 OSS
+- **存储**: 阿里云 OSS, AWS S3, MinIO 等 S3 兼容存储
 - **数据库**: SQLite 或 MySQL
 - **服务器**: Waitress (生产环境)
 - **容器化**: Docker
@@ -60,12 +60,6 @@ uv sync --extra dev
 创建 `.env` 文件并填写以下配置：
 
 ```env
-# 阿里云 OSS 配置
-OSS_ACCESS_KEY_ID=your_access_key_id
-OSS_ACCESS_KEY_SECRET=your_access_key_secret
-OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
-OSS_BUCKET_NAME=your_bucket_name
-
 # 服务器配置
 SERVER_WORKERS=4
 
@@ -78,6 +72,25 @@ DB_TYPE=sqlite
 # MYSQL_USER=root
 # MYSQL_PASSWORD=password
 # MYSQL_DB=html_hoster
+
+# 存储服务类型 (oss 或 s3)
+STORAGE_TYPE=oss
+
+# 阿里云 OSS 配置 (当 STORAGE_TYPE=oss 时使用)
+OSS_ACCESS_KEY_ID=your_access_key_id
+OSS_ACCESS_KEY_SECRET=your_access_key_secret
+OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
+OSS_BUCKET_NAME=your_bucket_name
+OSS_PREFIX=html_hoster/sites
+
+# S3 兼容存储配置 (当 STORAGE_TYPE=s3 时使用)
+# S3_ACCESS_KEY_ID=your_access_key_id
+# S3_SECRET_ACCESS_KEY=your_secret_access_key
+# S3_ENDPOINT_URL=https://s3.amazonaws.com
+# S3_REGION_NAME=us-east-1
+# S3_BUCKET_NAME=your_bucket_name
+# S3_PREFIX=html_hoster/sites
+# S3_USE_SSL=true
 ```
 
 ### 4. 运行应用
@@ -109,12 +122,13 @@ docker build -t html_hoster .
 
 ### 运行容器
 
-使用 SQLite 数据库:
+使用 SQLite 数据库和阿里云 OSS:
 
 ```bash
 docker run -d \
   --name html_hoster \
   -p 5000:5000 \
+  -e STORAGE_TYPE=oss \
   -e OSS_ACCESS_KEY_ID=your_key \
   -e OSS_ACCESS_KEY_SECRET=your_secret \
   -e OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
@@ -124,22 +138,24 @@ docker run -d \
   html_hoster
 ```
 
-使用 MySQL 数据库:
+使用 MySQL 数据库和 S3 存储:
 
 ```bash
 docker run -d \
   --name html_hoster \
   -p 5000:5000 \
-  -e OSS_ACCESS_KEY_ID=your_key \
-  -e OSS_ACCESS_KEY_SECRET=your_secret \
-  -e OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
-  -e OSS_BUCKET_NAME=your_bucket \
   -e DB_TYPE=mysql \
   -e MYSQL_HOST=mysql_host \
   -e MYSQL_PORT=3306 \
   -e MYSQL_USER=root \
   -e MYSQL_PASSWORD=password \
   -e MYSQL_DB=html_hoster \
+  -e STORAGE_TYPE=s3 \
+  -e S3_ACCESS_KEY_ID=your_key \
+  -e S3_SECRET_ACCESS_KEY=your_secret \
+  -e S3_ENDPOINT_URL=https://s3.amazonaws.com \
+  -e S3_REGION_NAME=us-east-1 \
+  -e S3_BUCKET_NAME=your_bucket \
   -v $(pwd)/uploads:/app/uploads \
   html_hoster
 ```
