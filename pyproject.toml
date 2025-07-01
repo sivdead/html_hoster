@@ -1,21 +1,102 @@
-
 [project]
 name = "html_hoster"
-version = "0.1.0"
-description = "A simple web app to host static HTML sites on Aliyun OSS."
+version = "1.0.0"
+description = "一个简单优雅的静态网站托管平台，支持快速部署 HTML 网站到阿里云 OSS"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+keywords = ["html", "hosting", "oss", "flask", "static-site"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 requires-python = ">=3.10"
 dependencies = [
-    "flask",
-    "oss2",
-    "python-dotenv",
-    "waitress",
-    "Flask-SQLAlchemy",
-    "SQLAlchemy",
+    "flask>=2.3.0",
+    "oss2>=2.17.0",
+    "python-dotenv>=1.0.0",
+    "waitress>=2.1.0",
+    "Flask-SQLAlchemy>=3.0.0",
+    "SQLAlchemy>=2.0.0",
+    "werkzeug>=2.3.0",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-flask>=1.2.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/html_hoster"
+Repository = "https://github.com/yourusername/html_hoster.git"
+Issues = "https://github.com/yourusername/html_hoster/issues"
+Documentation = "https://github.com/yourusername/html_hoster/wiki"
+
+[project.scripts]
+html-hoster = "html_hoster.__main__:main"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["html_hoster*"]
+
+[tool.setuptools.package-data]
+html_hoster = ["templates/*.html"]
+
+[tool.uv]
+# 配置默认的 PyPI 镜像源（中国用户推荐）
+index-url = "https://mirrors.cloud.tencent.com/pypi/simple/"
+# 备用镜像源
+extra-index-url = [
+    "https://mirrors.aliyun.com/pypi/simple/",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
