@@ -35,7 +35,7 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/html_hoster.git
+git clone https://github.com/sivdead/html_hoster.git
 cd html_hoster
 ```
 

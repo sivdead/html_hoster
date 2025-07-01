@@ -45,10 +45,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/html_hoster"
-Repository = "https://github.com/yourusername/html_hoster.git"
-Issues = "https://github.com/yourusername/html_hoster/issues"
-Documentation = "https://github.com/yourusername/html_hoster/wiki"
+Homepage = "https://github.com/sivdead/html_hoster"
+Repository = "https://github.com/sivdead/html_hoster.git"
+Issues = "https://github.com/sivdead/html_hoster/issues"
+Documentation = "https://github.com/sivdead/html_hoster/wiki"
 
 [project.scripts]
 html-hoster = "html_hoster.__main__:main"
