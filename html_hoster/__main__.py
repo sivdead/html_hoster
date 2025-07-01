@@ -8,6 +8,10 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import mimetypes
+import pymysql
+
+# 设置 PyMySQL 作为 mysqlclient 的替代
+pymysql.install_as_MySQLdb()
 
 # 设置日志
 logging.basicConfig(
@@ -29,7 +33,25 @@ SERVER_WORKERS = int(os.getenv("SERVER_WORKERS", 4))
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+
+# 数据库配置
+DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
+
+if DB_TYPE == "mysql":
+    # MySQL 配置
+    MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+    MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
+    MYSQL_USER = os.getenv("MYSQL_USER", "root")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+    MYSQL_DB = os.getenv("MYSQL_DB", "html_hoster")
+    
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+    logging.info(f"使用 MySQL 数据库: {MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}")
+else:
+    # SQLite 配置（默认）
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+    logging.info(f"使用 SQLite 数据库: {DB_PATH}")
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB 最大上传大小
 
@@ -442,7 +464,10 @@ def main():
 
     with app.app_context():
         db.create_all()
-        logging.info(f"数据库初始化完成: {DB_PATH}")
+        if DB_TYPE == "mysql":
+            logging.info(f"MySQL 数据库初始化完成: {os.getenv('MYSQL_HOST', 'localhost')}:{os.getenv('MYSQL_PORT', '3306')}/{os.getenv('MYSQL_DB', 'html_hoster')}")
+        else:
+            logging.info(f"SQLite 数据库初始化完成: {DB_PATH}")
     
     logging.info(f"启动服务器 - 端口: 5000, 工作线程: {SERVER_WORKERS}")
     serve(app, host="0.0.0.0", port=5000, threads=SERVER_WORKERS)

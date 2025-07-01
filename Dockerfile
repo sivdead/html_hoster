@@ -1,8 +1,10 @@
 # 基于 Python 3.11 的轻量级镜像
 FROM m.daocloud.io/docker.io/library/python:3.11.8-slim-bullseye
 
-# 更新系统包以修复已知漏洞，并清理构建缓存
-RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+# 更新系统包以修复已知漏洞，并安装 MySQL 客户端库，最后清理构建缓存
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y default-libmysqlclient-dev build-essential pkg-config \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app

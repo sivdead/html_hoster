@@ -11,7 +11,7 @@
 - 🚀 **快速部署** - 支持 ZIP 文件上传和 HTML 代码粘贴
 - 🌐 **云端托管** - 基于阿里云 OSS 的可靠存储
 - 🎨 **现代化 UI** - 响应式设计，支持移动端
-- 💾 **数据持久化** - SQLite 数据库存储站点信息
+- 💾 **数据持久化** - 支持 SQLite 和 MySQL 数据库
 - 🔧 **易于管理** - 支持站点重命名和删除
 - 📊 **API 支持** - RESTful API 接口
 
@@ -20,7 +20,7 @@
 - **后端**: Python 3.10+, Flask, SQLAlchemy
 - **前端**: HTML5, CSS3, JavaScript (原生)
 - **存储**: 阿里云 OSS
-- **数据库**: SQLite
+- **数据库**: SQLite 或 MySQL
 - **服务器**: Waitress (生产环境)
 - **容器化**: Docker
 
@@ -68,6 +68,16 @@ OSS_BUCKET_NAME=your_bucket_name
 
 # 服务器配置
 SERVER_WORKERS=4
+
+# 数据库配置 (sqlite 或 mysql)
+DB_TYPE=sqlite
+
+# MySQL 数据库配置 (当 DB_TYPE=mysql 时使用)
+# MYSQL_HOST=localhost
+# MYSQL_PORT=3306
+# MYSQL_USER=root
+# MYSQL_PASSWORD=password
+# MYSQL_DB=html_hoster
 ```
 
 ### 4. 运行应用
@@ -99,6 +109,8 @@ docker build -t html_hoster .
 
 ### 运行容器
 
+使用 SQLite 数据库:
+
 ```bash
 docker run -d \
   --name html_hoster \
@@ -108,6 +120,26 @@ docker run -d \
   -e OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
   -e OSS_BUCKET_NAME=your_bucket \
   -v $(pwd)/instance:/app/html_hoster/instance \
+  -v $(pwd)/uploads:/app/uploads \
+  html_hoster
+```
+
+使用 MySQL 数据库:
+
+```bash
+docker run -d \
+  --name html_hoster \
+  -p 5000:5000 \
+  -e OSS_ACCESS_KEY_ID=your_key \
+  -e OSS_ACCESS_KEY_SECRET=your_secret \
+  -e OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
+  -e OSS_BUCKET_NAME=your_bucket \
+  -e DB_TYPE=mysql \
+  -e MYSQL_HOST=mysql_host \
+  -e MYSQL_PORT=3306 \
+  -e MYSQL_USER=root \
+  -e MYSQL_PASSWORD=password \
+  -e MYSQL_DB=html_hoster \
   -v $(pwd)/uploads:/app/uploads \
   html_hoster
 ```
