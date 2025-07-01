@@ -4,11 +4,11 @@ import zipfile
 import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from dotenv import load_dotenv
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import mimetypes
 import pymysql
 from html_hoster.storage import get_storage_service
+from html_hoster.database import db, init_db, Site
 
 # 设置 PyMySQL 作为 mysqlclient 的替代
 pymysql.install_as_MySQLdb()
@@ -28,59 +28,21 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.abspath(os.path.join(BASE_DIR, "./templates"))
 UPLOAD_DIR = os.path.abspath(os.path.join(BASE_DIR, "../uploads"))
-DB_PATH = os.path.abspath(os.path.join(BASE_DIR, "./instance/sites.db"))
 SERVER_WORKERS = int(os.getenv("SERVER_WORKERS", 4))
 
+# 初始化 Flask 应用
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.config["UPLOAD_FOLDER"] = UPLOAD_DIR
-
-# 数据库配置
-DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
-
-if DB_TYPE == "mysql":
-    # MySQL 配置
-    MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-    MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-    MYSQL_USER = os.getenv("MYSQL_USER", "root")
-    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
-    MYSQL_DB = os.getenv("MYSQL_DB", "html_hoster")
-    
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
-    logging.info(f"使用 MySQL 数据库: {MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}")
-else:
-    # SQLite 配置（默认）
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
-    logging.info(f"使用 SQLite 数据库: {DB_PATH}")
-
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB 最大上传大小
 
-db = SQLAlchemy(app)
+# 初始化数据库
+init_db(app)
 
 # 确保上传目录存在
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 # 初始化存储服务
 storage = get_storage_service()
-
-
-class Site(db.Model):
-    id = db.Column(db.String(36), primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
-    oss_url = db.Column(db.String(200), nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-
-    def __repr__(self):
-        return f"<Site {self.name}>"
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "oss_url": self.oss_url,
-            "created_at": self.created_at.isoformat() if self.created_at else None
-        }
 
 
 @app.errorhandler(413)
@@ -454,13 +416,6 @@ def main():
     """主函数入口"""
     from waitress import serve
 
-    with app.app_context():
-        db.create_all()
-        if DB_TYPE == "mysql":
-            logging.info(f"MySQL 数据库初始化完成: {os.getenv('MYSQL_HOST', 'localhost')}:{os.getenv('MYSQL_PORT', '3306')}/{os.getenv('MYSQL_DB', 'html_hoster')}")
-        else:
-            logging.info(f"SQLite 数据库初始化完成: {DB_PATH}")
-    
     logging.info(f"启动服务器 - 端口: 5000, 工作线程: {SERVER_WORKERS}")
     serve(app, host="0.0.0.0", port=5000, threads=SERVER_WORKERS)
 
