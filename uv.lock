@@ -2,6 +2,21 @@ version = 1
 requires-python = ">=3.10"
 
 [[package]]
+name = "alembic"
+version = "1.16.2"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "mako" },
+    { name = "sqlalchemy" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/9c/35/116797ff14635e496bbda0c168987f5326a6555b09312e9b817e360d1f56/alembic-1.16.2.tar.gz", hash = "sha256:e53c38ff88dadb92eb22f8b150708367db731d58ad7e9d417c9168ab516cbed8" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/dd/e2/88e425adac5ad887a087c38d04fe2030010572a3e0e627f8a6e8c33eeda8/alembic-1.16.2-py3-none-any.whl", hash = "sha256:5f42e9bd0afdbd1d5e3ad856c01754530367debdebf21ed6894e34af52b3bb03" },
+]
+
+[[package]]
 name = "aliyun-python-sdk-core"
 version = "2.16.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -375,6 +390,32 @@ wheels = [
 ]
 
 [[package]]
+name = "flask-executor"
+version = "1.0.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "flask" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/68/9d/48200aa3211148e1a250882e68be5a97a6a6995ff6d63aa1f9b32b5c6e35/Flask-Executor-1.0.0.tar.gz", hash = "sha256:4bc113def5d9f1c7ff272ff7ba09f843468eab80469bdbd21625a111b2c8ae7b" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/ff/26/61bc021698eaaf8dc58861f3f88feabbe2bd2fb1bcec6402dd2b9a59cb96/Flask_Executor-1.0.0-py3-none-any.whl", hash = "sha256:c044dc6393326a83351e69e4ddf3686270abffeac2b599260cebf0ea5d1e93de" },
+]
+
+[[package]]
+name = "flask-migrate"
+version = "4.1.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "alembic" },
+    { name = "flask" },
+    { name = "flask-sqlalchemy" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/5a/8e/47c7b3c93855ceffc2eabfa271782332942443321a07de193e4198f920cf/flask_migrate-4.1.0.tar.gz", hash = "sha256:1a336b06eb2c3ace005f5f2ded8641d534c18798d64061f6ff11f79e1434126d" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/d2/c4/3f329b23d769fe7628a5fc57ad36956f1fb7132cf8837be6da762b197327/Flask_Migrate-4.1.0-py3-none-any.whl", hash = "sha256:24d8051af161782e0743af1b04a152d007bad9772b2bca67b7ec1e8ceeb3910d" },
+]
+
+[[package]]
 name = "flask-sqlalchemy"
 version = "3.1.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -486,11 +527,13 @@ wheels = [
 
 [[package]]
 name = "html-hoster"
-version = "0.4.0"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
     { name = "flask" },
+    { name = "flask-executor" },
+    { name = "flask-migrate" },
     { name = "flask-sqlalchemy" },
     { name = "mysqlclient" },
     { name = "oss2" },
@@ -519,6 +562,8 @@ requires-dist = [
     { name = "boto3", specifier = ">=1.28.0" },
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "flask", specifier = ">=2.3.0" },
+    { name = "flask-executor", specifier = ">=1.0.0" },
+    { name = "flask-migrate", specifier = ">=4.0.0" },
     { name = "flask-sqlalchemy", specifier = ">=3.0.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
     { name = "mysqlclient", specifier = ">=2.2.0" },
@@ -632,6 +677,18 @@ source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/3c/56/3f325b1eef9791759784aa5046a8f6a1aff8f7c898a2e34506771d3b99d8/jmespath-0.10.0.tar.gz", hash = "sha256:b85d0567b8666149a93172712e68920734333c0ce7e89b78b3e987f71e5ed4f9" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/07/cb/5f001272b6faeb23c1c9e0acc04d48eaaf5c862c17709d20e3469c6e0139/jmespath-0.10.0-py2.py3-none-any.whl", hash = "sha256:cdf6525904cc597730141d61b36f2e4b8ecc257c420fa2f4549bac2c2d0cb72f" },
+]
+
+[[package]]
+name = "mako"
+version = "1.3.10"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59" },
 ]
 
 [[package]]

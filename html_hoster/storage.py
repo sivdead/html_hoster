@@ -42,6 +42,11 @@ class StorageService(ABC):
     def get_site_url(self, site_id):
         """获取站点的访问URL"""
         pass
+    
+    @abstractmethod
+    def delete_prefix(self, prefix):
+        """删除指定前缀的所有文件（批量删除）"""
+        pass
 
 
 class AliOssStorage(StorageService):
@@ -157,6 +162,29 @@ class AliOssStorage(StorageService):
     def get_site_url(self, site_id):
         """获取站点的访问URL"""
         return self.get_file_url(f"{site_id}/index.html")
+
+    def delete_prefix(self, prefix):
+        """删除指定前缀的所有文件（批量删除）"""
+        import oss2
+        
+        # 规范化路径
+        full_prefix = os.path.join(self.prefix, prefix).replace("\\", "/")
+        
+        try:
+            # 获取所有对象
+            objects = []
+            for obj in oss2.ObjectIterator(self.bucket, prefix=full_prefix):
+                objects.append(obj.key)
+            
+            # 批量删除对象
+            for obj in objects:
+                self.bucket.delete_object(obj)
+            
+            logging.info(f"成功从OSS删除前缀为 {full_prefix} 的所有文件")
+            return True
+        except Exception as e:
+            logging.error(f"从OSS删除前缀为 {full_prefix} 的所有文件失败: {e}")
+            raise
 
 
 class S3Storage(StorageService):
@@ -306,6 +334,28 @@ class S3Storage(StorageService):
         """获取站点的访问URL"""
         return self.get_file_url(f"{site_id}/index.html")
 
+    def delete_prefix(self, prefix):
+        """删除指定前缀的所有文件（批量删除）"""
+        import boto3
+        
+        # 规范化路径
+        full_prefix = os.path.join(self.prefix, prefix).replace("\\", "/")
+        
+        try:
+            # 获取所有对象
+            objects = []
+            for obj in self.s3.list_objects(Bucket=self.bucket_name, Prefix=full_prefix)['Contents']:
+                objects.append({'Key': obj['Key']})
+            
+            # 批量删除对象
+            self.s3.delete_objects(Bucket=self.bucket_name, Delete={'Objects': objects})
+            
+            logging.info(f"成功从S3删除前缀为 {full_prefix} 的所有文件")
+            return True
+        except Exception as e:
+            logging.error(f"从S3删除前缀为 {full_prefix} 的所有文件失败: {e}")
+            raise
+
 
 class SupabaseStorage(StorageService):
     """Supabase存储服务实现"""
@@ -440,6 +490,27 @@ class SupabaseStorage(StorageService):
     def get_site_url(self, site_id):
         """获取站点的访问URL"""
         return self.get_file_url(f"{site_id}/index.html")
+
+    def delete_prefix(self, prefix):
+        """删除指定前缀的所有文件（批量删除）"""
+        # 规范化路径
+        full_prefix = os.path.join(self.prefix, prefix).replace("\\", "/")
+        
+        try:
+            # 获取所有对象
+            objects = []
+            for obj in self.supabase.storage.from_(self.bucket_name).list(full_prefix):
+                objects.append(obj['name'])
+            
+            # 批量删除对象
+            for obj in objects:
+                self.supabase.storage.from_(self.bucket_name).remove([obj])
+            
+            logging.info(f"成功从Supabase删除前缀为 {full_prefix} 的所有文件")
+            return True
+        except Exception as e:
+            logging.error(f"从Supabase删除前缀为 {full_prefix} 的所有文件失败: {e}")
+            raise
 
 
 class LocalStorage(StorageService):
@@ -581,6 +652,32 @@ class LocalStorage(StorageService):
     def get_site_url(self, site_id):
         """获取站点的访问URL"""
         return self.get_file_url(f"{site_id}/index.html")
+
+    def delete_prefix(self, prefix):
+        """删除指定前缀的所有文件（批量删除）"""
+        # 规范化路径
+        full_prefix = os.path.join(self.sites_folder, prefix).replace("\\", "/")
+        
+        try:
+            # 获取所有文件
+            files = []
+            for root, _, filenames in os.walk(full_prefix):
+                for filename in filenames:
+                    file_path = os.path.join(root, filename)
+                    files.append(file_path)
+            
+            # 批量删除文件
+            for file_path in files:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            
+            logging.info(f"成功从网站存储目录删除前缀为 {full_prefix} 的所有文件")
+            return True
+        except Exception as e:
+            logging.error(f"从网站存储目录删除前缀为 {full_prefix} 的所有文件失败: {e}")
+            raise
 
 
 def get_storage_service(app=None):

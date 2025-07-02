@@ -24,6 +24,8 @@ RUN uv pip install -e . --python $(which python) \
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=production
 ENV STORAGE_TYPE=oss
+ENV EXECUTOR_TYPE=thread
+ENV EXECUTOR_MAX_WORKERS=4
 
 # 暴露端口
 EXPOSE 5000

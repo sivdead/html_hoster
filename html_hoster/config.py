@@ -108,6 +108,10 @@ class BaseConfig(BaseSettings):
     supabase_key: Optional[str] = None
     supabase_bucket: str = "sites"
     
+    # Executor 设置
+    executor_type: str = "thread"
+    executor_max_workers: int = 4
+
     # 从环境变量加载配置
     model_config = SettingsConfigDict(
         env_prefix="", 
@@ -212,6 +216,10 @@ class BaseConfig(BaseSettings):
         config["SUPABASE_URL"] = self.supabase_url
         config["SUPABASE_KEY"] = self.supabase_key
         config["SUPABASE_BUCKET"] = self.supabase_bucket
+        
+        # Executor 设置
+        config["EXECUTOR_TYPE"] = self.executor_type
+        config["EXECUTOR_MAX_WORKERS"] = self.executor_max_workers
         
         return config
     

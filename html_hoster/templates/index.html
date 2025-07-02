@@ -118,7 +118,7 @@
                         </thead>
                         <tbody>
                             {% for site in sites %}
-                            <tr>
+                            <tr data-site-id="{{ site.id }}" data-status="{{ site.status }}">
                                 <td>{{ site.name }}</td>
                                 <td>{{ site.created_at.strftime('%Y-%m-%d %H:%M') if site.created_at else '未知' }}</td>
                                 <td>
@@ -127,6 +127,9 @@
                                     </a>
                                 </td>
                                 <td>
+                                    {% if site.status == "pending" %}
+                                    <span class="badge bg-warning text-dark">处理中</span>
+                                    {% elif site.status == "completed" %}
                                     <div class="form-check form-switch">
                                         <input class="form-check-input toggle-publish-status" type="checkbox" role="switch" 
                                                id="publish-status-{{ site.id }}" 
@@ -138,15 +141,23 @@
                                             </span>
                                         </label>
                                     </div>
+                                    {% elif site.status == "failed" %}
+                                    <span class="badge bg-danger">处理失败</span>
+                                    <i class="bi bi-info-circle text-danger" data-bs-toggle="tooltip" title="{{ site.error_message }}"></i>
+                                    {% else %}
+                                    <span class="badge bg-secondary">未知状态</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
+                                        {% if site.status == "completed" %}
                                         <a href="{{ site.oss_url }}" target="_blank" class="btn btn-outline-primary">
                                             <i class="bi bi-eye"></i> 查看
                                         </a>
                                         <button class="btn btn-outline-info preview-site-btn" data-site-id="{{ site.id }}" data-site-url="{{ site.oss_url }}">
                                             <i class="bi bi-window"></i> 预览
                                         </button>
+                                        {% endif %}
                                         <button class="btn btn-outline-secondary rename-site-btn" data-site-id="{{ site.id }}" data-site-name="{{ site.name }}">
                                             <i class="bi bi-pencil"></i> 重命名
                                         </button>

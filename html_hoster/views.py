@@ -68,41 +68,23 @@ def paste_site():
         if Site.query.filter_by(name=site_name).first():
             return jsonify({"success": False, "msg": "站点名称已存在"}), 400
         
-        # 创建临时目录
-        extract_path = os.path.join(current_app.config["UPLOAD_FOLDER"], site_id)
-        os.makedirs(extract_path, exist_ok=True)
-        
-        # 保存HTML文件
-        index_html_path = os.path.join(extract_path, "index.html")
-        with open(index_html_path, "w", encoding="utf-8") as f:
-            f.write(html_code)
-        
-        # 获取存储服务
-        storage = get_storage()
-        
-        # 上传到存储服务
-        remote_path = f"{site_id}/index.html"
-        try:
-            storage.upload_file(index_html_path, remote_path)
-            logging.info(f"成功上传粘贴的HTML到存储服务: {remote_path}")
-        except Exception as e:
-            logging.error(f"存储服务上传失败: {e}")
-            # 清理临时文件
-            os.remove(index_html_path)
-            os.rmdir(extract_path)
-            return jsonify({"success": False, "msg": "上传到云存储失败"}), 500
-        
-        # 保存到数据库
-        site_url = storage.get_site_url(site_id)
-        new_site = Site(name=site_name, oss_url=site_url, id=site_id, user_id=session.get('user_id'))
+        # 创建站点记录，状态为 pending
+        site_url = f"/site/{site_id}"  # 临时 URL，将在任务完成后更新
+        new_site = Site(
+            id=site_id, 
+            name=site_name, 
+            oss_url=site_url, 
+            user_id=session.get('user_id'),
+            status="pending"
+        )
         db.session.add(new_site)
         db.session.commit()
         
-        # 清理临时文件
-        os.remove(index_html_path)
-        os.rmdir(extract_path)
+        # 启动异步任务处理 HTML 粘贴
+        from html_hoster.tasks import process_html_paste
+        current_app.executor.submit(process_html_paste, html_code, site_id, site_name, session.get('user_id'))
         
-        logging.info(f"成功创建粘贴站点: {site_name}")
+        logging.info(f"已提交 HTML 粘贴任务: {site_name} (ID: {site_id})")
         return redirect(url_for("main.index"))
         
     except Exception as e:
@@ -163,211 +145,37 @@ def upload_file():
         
         # 临时文件路径
         zip_path = os.path.join(current_app.config["UPLOAD_FOLDER"], f"{site_id}.zip")
-        extract_path = os.path.join(current_app.config["UPLOAD_FOLDER"], site_id)
         
         try:
             # 保存上传的文件
             logging.info(f"保存上传的ZIP文件到: {zip_path}")
             file.save(zip_path)
             
-            # 验证ZIP文件
-            if not zipfile.is_zipfile(zip_path):
-                raise ValueError("无效的ZIP文件")
-            
-            # 解压文件
-            logging.info(f"解压ZIP文件到: {extract_path}")
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                # 检查解压后的大小
-                total_size = sum(zinfo.file_size for zinfo in zip_ref.filelist)
-                if total_size > 100 * 1024 * 1024:  # 100MB
-                    raise ValueError("解压后文件总大小超过100MB限制")
-                
-                zip_ref.extractall(extract_path)
-            
-            # 添加短暂延迟，确保文件解压完全释放
-            import time
-            time.sleep(0.5)
-            
-            # 查找index.html
-            index_html_path = None
-            for root, dirs, files in os.walk(extract_path):
-                if "index.html" in files:
-                    index_html_path = os.path.join(root, "index.html")
-                    break
-            
-            if not index_html_path:
-                raise ValueError("ZIP包中没有找到index.html文件")
-            
-            # 获取存储服务
-            storage = get_storage()
-            
-            # 上传到存储服务
-            uploaded_files = 0
-            file_list = []
-            
-            # 首先收集所有文件路径
-            for root, dirs, files in os.walk(extract_path):
-                for filename in files:
-                    local_path = os.path.join(root, filename)
-                    relative_path = os.path.relpath(local_path, extract_path)
-                    remote_path = f"{site_id}/{relative_path}"
-                    content_type, _ = mimetypes.guess_type(filename)
-                    
-                    file_list.append({
-                        'local_path': local_path,
-                        'remote_path': remote_path,
-                        'content_type': content_type
-                    })
-            
-            # 然后依次处理文件
-            for file_info in file_list:
-                try:
-                    storage.upload_file(
-                        file_info['local_path'], 
-                        file_info['remote_path'], 
-                        file_info['content_type']
-                    )
-                    uploaded_files += 1
-                    logging.info(f"上传文件到存储服务: {file_info['remote_path']}")
-                except Exception as e:
-                    logging.error(f"上传文件失败 {file_info['local_path']}: {e}")
-            
-            logging.info(f"成功上传 {uploaded_files} 个文件到存储服务")
-            
-            # 保存到数据库
-            site_url = storage.get_site_url(site_id)
-            new_site = Site(name=site_name, oss_url=site_url, id=site_id, user_id=session.get('user_id'))
+            # 创建站点记录，状态为 pending
+            site_url = f"/site/{site_id}"  # 临时 URL，将在任务完成后更新
+            new_site = Site(
+                id=site_id, 
+                name=site_name, 
+                oss_url=site_url, 
+                user_id=session.get('user_id'),
+                status="pending"
+            )
             db.session.add(new_site)
             db.session.commit()
             
-            logging.info(f"成功创建站点: {site_name} (ID: {site_id})")
+            # 启动异步任务处理 ZIP 文件
+            from html_hoster.tasks import process_zip_upload
+            current_app.executor.submit(process_zip_upload, zip_path, site_id, site_name, session.get('user_id'))
             
-            # 清理临时文件 - 只清理上传目录中的临时文件，保留站点存储目录中的文件
-            try:
-                # 添加延迟，确保所有文件操作完成
-                import time
-                time.sleep(0.5)
-                
-                # 清理zip文件，添加重试
-                for attempt in range(3):
-                    try:
-                        if os.path.exists(zip_path):
-                            os.remove(zip_path)
-                            logging.info(f"清理ZIP文件: {zip_path}")
-                        break
-                    except Exception as err:
-                        if attempt < 2:
-                            logging.warning(f"清理ZIP文件失败，尝试重试({attempt+1}/3): {err}")
-                            time.sleep(1)
-                        else:
-                            logging.warning(f"清理ZIP文件失败: {err}")
-                
-                # 清理解压目录，添加重试 - 上传完成后可以安全删除
-                import shutil
-                for attempt in range(3):
-                    try:
-                        if os.path.exists(extract_path):
-                            shutil.rmtree(extract_path)
-                            logging.info(f"清理解压目录: {extract_path}")
-                        break
-                    except Exception as err:
-                        if attempt < 2:
-                            logging.warning(f"清理解压目录失败，尝试重试({attempt+1}/3): {err}")
-                            time.sleep(1)
-                        else:
-                            logging.warning(f"清理解压目录失败: {err}")
-                
-                logging.info(f"清理临时文件完成")
-            except Exception as e:
-                logging.warning(f"清理临时文件失败: {e}")
-            
+            logging.info(f"已提交 ZIP 上传任务: {site_name} (ID: {site_id})")
             return redirect(url_for("main.index"))
             
-        except ValueError as e:
-            # 清理临时文件
-            try:
-                # 添加延迟，确保所有文件操作完成
-                import time
-                time.sleep(0.5)
-                
-                # 清理zip文件，添加重试
-                for attempt in range(3):
-                    try:
-                        if os.path.exists(zip_path):
-                            os.remove(zip_path)
-                            logging.info(f"清理ZIP文件: {zip_path}")
-                        break
-                    except Exception as err:
-                        if attempt < 2:
-                            logging.warning(f"清理ZIP文件失败，尝试重试({attempt+1}/3): {err}")
-                            time.sleep(1)
-                        else:
-                            logging.warning(f"清理ZIP文件失败: {err}")
-                
-                # 清理解压目录，添加重试
-                import shutil
-                for attempt in range(3):
-                    try:
-                        if os.path.exists(extract_path):
-                            shutil.rmtree(extract_path)
-                            logging.info(f"清理解压目录: {extract_path}")
-                        break
-                    except Exception as err:
-                        if attempt < 2:
-                            logging.warning(f"清理解压目录失败，尝试重试({attempt+1}/3): {err}")
-                            time.sleep(1)
-                        else:
-                            logging.warning(f"清理解压目录失败: {err}")
-                            
-                logging.info(f"清理临时文件完成")
-            except Exception as clean_e:
-                logging.warning(f"清理临时文件失败: {clean_e}")
-                
-            logging.error(f"上传验证失败: {e}")
-            return jsonify({"success": False, "msg": str(e)}), 400
-            
         except Exception as e:
+            logging.error(f"保存上传文件失败: {e}")
             # 清理临时文件
-            try:
-                # 添加延迟，确保所有文件操作完成
-                import time
-                time.sleep(0.5)
-                
-                # 清理zip文件，添加重试
-                for attempt in range(3):
-                    try:
-                        if os.path.exists(zip_path):
-                            os.remove(zip_path)
-                            logging.info(f"清理ZIP文件: {zip_path}")
-                        break
-                    except Exception as err:
-                        if attempt < 2:
-                            logging.warning(f"清理ZIP文件失败，尝试重试({attempt+1}/3): {err}")
-                            time.sleep(1)
-                        else:
-                            logging.warning(f"清理ZIP文件失败: {err}")
-                
-                # 清理解压目录，添加重试
-                import shutil
-                for attempt in range(3):
-                    try:
-                        if os.path.exists(extract_path):
-                            shutil.rmtree(extract_path)
-                            logging.info(f"清理解压目录: {extract_path}")
-                        break
-                    except Exception as err:
-                        if attempt < 2:
-                            logging.warning(f"清理解压目录失败，尝试重试({attempt+1}/3): {err}")
-                            time.sleep(1)
-                        else:
-                            logging.warning(f"清理解压目录失败: {err}")
-                            
-                logging.info(f"清理临时文件完成")
-            except Exception as clean_e:
-                logging.warning(f"清理临时文件失败: {clean_e}")
-                
-            logging.error(f"上传处理失败: {e}")
-            return jsonify({"success": False, "msg": "上传处理失败"}), 500
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+            return jsonify({"success": False, "msg": "保存上传文件失败"}), 500
             
     except Exception as e:
         logging.error(f"上传文件失败: {e}")
@@ -445,10 +253,17 @@ def delete_site(site_id):
         
         # 删除存储服务中的文件
         try:
-            files = get_storage().list_files(site_id)
-            for file_path in files:
-                get_storage().delete_file(file_path)
-            logging.info(f"已删除存储服务中的文件: {len(files)} 个")
+            storage = get_storage()
+            # 使用批量删除功能
+            if hasattr(storage, 'delete_prefix'):
+                storage.delete_prefix(site_id)
+                logging.info(f"已批量删除站点 {site_id} 的所有文件")
+            else:
+                # 回退到逐个文件删除
+                files = storage.list_files(site_id)
+                for file_path in files:
+                    storage.delete_file(file_path)
+                logging.info(f"已删除存储服务中的文件: {len(files)} 个")
         except Exception as e:
             logging.error(f"删除存储服务文件失败: {e}")
             # 继续删除数据库记录
@@ -569,4 +384,29 @@ def toggle_site_publish_status(site_id):
         
     except Exception as e:
         logging.error(f"切换站点发布状态失败: {e}")
-        return jsonify({"success": False, "msg": "切换站点发布状态失败"}), 500 
+        return jsonify({"success": False, "msg": "切换站点发布状态失败"}), 500
+
+
+@main_bp.route("/api/site/<site_id>/status", methods=["GET"])
+def api_site_status(site_id):
+    """API: 获取站点状态"""
+    try:
+        site = Site.query.get(site_id)
+        if not site:
+            return jsonify({"success": False, "msg": "站点不存在"}), 404
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "id": site.id,
+                "name": site.name,
+                "status": site.status,
+                "error_message": site.error_message,
+                "oss_url": site.oss_url,
+                "is_published": site.is_published
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"API获取站点状态失败: {e}")
+        return jsonify({"success": False, "msg": "获取站点状态失败"}), 500 
