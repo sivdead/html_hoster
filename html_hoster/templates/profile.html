@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - HTML Hoster</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+    <!-- 背景渐变 -->
+    <div class="gradient-background"></div>
+
+    <div class="container py-4">
+        <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                <i class="bi bi-code-square fs-4 me-2 text-primary"></i>
+                <span class="fs-4 fw-bold text-primary">HTML Hoster</span>
+            </a>
+            
+            <ul class="nav nav-pills">
+                <li class="nav-item"><a href="/" class="nav-link">首页</a></li>
+                <li class="nav-item"><a href="/auth/profile" class="nav-link active" aria-current="page">个人资料</a></li>
+                <li class="nav-item"><a href="/auth/logout" class="nav-link">登出</a></li>
+                <li class="nav-item">
+                    <button id="theme-toggle-btn" class="btn btn-outline-secondary ms-2" aria-label="切换主题">
+                        <i id="theme-icon" class="bi bi-sun-fill"></i>
+                    </button>
+                </li>
+            </ul>
+        </header>
+
+        <div class="row g-4">
+            <!-- 个人信息卡片 -->
+            <div class="col-md-4">
+                <div class="card shadow-sm rounded-4 border-0 animate-fadeInDown">
+                    <div class="card-header bg-primary bg-opacity-10 border-0 rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-circle fs-4 me-2 text-primary"></i>
+                            <h5 class="card-title mb-0">个人信息</h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-column align-items-center text-center">
+                            <div class="mt-3">
+                                <h4 class="mb-3">{{ user.username }}</h4>
+                                {% if user.email %}
+                                <div class="d-flex align-items-center justify-content-center mb-2">
+                                    <i class="bi bi-envelope me-2 text-muted"></i>
+                                    <p class="text-muted mb-0">{{ user.email }}</p>
+                                </div>
+                                {% endif %}
+                                <div class="d-flex align-items-center justify-content-center mb-2">
+                                    <i class="bi bi-calendar-date me-2 text-muted"></i>
+                                    <p class="text-muted mb-0">注册于 {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+                                </div>
+                                {% if user.is_admin %}
+                                <span class="badge bg-primary rounded-pill">管理员</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">站点数量</span>
+                                <span class="badge bg-primary rounded-pill">{{ user.sites|length }}</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ (user.sites|length / 20) * 100 }}%;" aria-valuenow="{{ user.sites|length }}" aria-valuemin="0" aria-valuemax="20"></div>
+                            </div>
+                            <div class="text-end mt-1">
+                                <small class="text-muted">{{ user.sites|length }}/20</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 站点列表卡片 -->
+            <div class="col-md-8">
+                <div class="card shadow-sm rounded-4 border-0 animate-fadeInRight mb-4">
+                    <div class="card-header bg-primary bg-opacity-10 border-0 rounded-top-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-globe fs-4 me-2 text-primary"></i>
+                                <h5 class="card-title mb-0">我的站点</h5>
+                            </div>
+                            <a href="/" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i> 新建站点
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if user.sites %}
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>站点名称</th>
+                                            <th>创建时间</th>
+                                            <th>状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for site in user.sites %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-code text-primary me-2"></i>
+                                                    <span>{{ site.name }}</span>
+                                                </div>
+                                            </td>
+                                            <td>{{ site.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input toggle-publish-status" type="checkbox" role="switch" 
+                                                           id="publish-status-{{ site.id }}" 
+                                                           data-site-id="{{ site.id }}" 
+                                                           {% if site.is_published %}checked{% endif %}>
+                                                    <label class="form-check-label" for="publish-status-{{ site.id }}">
+                                                        <span class="publish-status-label {% if site.is_published %}text-success{% else %}text-secondary{% endif %}">
+                                                            {% if site.is_published %}已发布{% else %}未发布{% endif %}
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ site.oss_url }}" target="_blank" class="btn btn-outline-primary">
+                                                        <i class="bi bi-eye"></i> 查看
+                                                    </a>
+                                                    <button class="btn btn-outline-secondary rename-site-btn" data-site-id="{{ site.id }}" data-site-name="{{ site.name }}">
+                                                        <i class="bi bi-pencil"></i> 重命名
+                                                    </button>
+                                                    <button class="btn btn-outline-danger delete-site-btn" data-site-id="{{ site.id }}" data-site-name="{{ site.name }}">
+                                                        <i class="bi bi-trash"></i> 删除
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="bi bi-folder2-open fs-1 text-muted"></i>
+                                <p class="mt-3 fs-5">您还没有创建任何站点</p>
+                                <a href="/" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> 创建站点
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 修改密码卡片 -->
+                <div class="card shadow-sm rounded-4 border-0 animate-fadeInUp">
+                    <div class="card-header bg-primary bg-opacity-10 border-0 rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-shield-lock fs-4 me-2 text-primary"></i>
+                            <h5 class="card-title mb-0">修改密码</h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form id="change-password-form">
+                            <div class="mb-3">
+                                <label for="current-password" class="form-label">当前密码</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                    <input type="password" class="form-control" id="current-password" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new-password" class="form-label">新密码</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" id="new-password" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm-password" class="form-label">确认新密码</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-check-circle"></i></span>
+                                    <input type="password" class="form-control" id="confirm-password" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i> 修改密码
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重命名站点模态框 -->
+    <div class="modal fade" id="rename-site-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">重命名站点</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="rename-site-form">
+                        <input type="hidden" id="rename-site-id">
+                        <div class="mb-3">
+                            <label for="rename-site-name" class="form-label">新站点名称</label>
+                            <input type="text" class="form-control" id="rename-site-name" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirm-rename-btn">确认重命名</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除站点确认模态框 -->
+    <div class="modal fade" id="delete-site-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>您确定要删除站点 "<span id="delete-site-name"></span>" 吗？</p>
+                    <p class="text-danger">此操作不可撤销，站点的所有文件将被永久删除！</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-btn">确认删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框 -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">提示</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-message"></div>
+        </div>
+    </div>
+
+    <footer class="pt-3 mt-5 text-body-secondary border-top text-center">
+        <p>&copy; 2023-2024 HTML Hoster</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 重命名站点
+            const renameSiteModal = new bootstrap.Modal(document.getElementById('rename-site-modal'));
+            const renameSiteBtns = document.querySelectorAll('.rename-site-btn');
+            const confirmRenameBtn = document.getElementById('confirm-rename-btn');
+            const renameSiteId = document.getElementById('rename-site-id');
+            const renameSiteName = document.getElementById('rename-site-name');
+            
+            renameSiteBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const siteId = this.dataset.siteId;
+                    const siteName = this.dataset.siteName;
+                    renameSiteId.value = siteId;
+                    renameSiteName.value = siteName;
+                    renameSiteModal.show();
+                });
+            });
+            
+            confirmRenameBtn.addEventListener('click', function() {
+                const siteId = renameSiteId.value;
+                const newName = renameSiteName.value.trim();
+                
+                if (!newName) {
+                    showToast('错误', '站点名称不能为空', 'danger');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('new_name', newName);
+                
+                fetch(`/rename_site/${siteId}`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('成功', '站点重命名成功', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showToast('错误', data.msg || '重命名失败', 'danger');
+                    }
+                    renameSiteModal.hide();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('错误', '重命名请求失败', 'danger');
+                    renameSiteModal.hide();
+                });
+            });
+            
+            // 删除站点
+            const deleteSiteModal = new bootstrap.Modal(document.getElementById('delete-site-modal'));
+            const deleteSiteBtns = document.querySelectorAll('.delete-site-btn');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            let deletingSiteId = null;
+            
+            deleteSiteBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const siteId = this.dataset.siteId;
+                    const siteName = this.dataset.siteName;
+                    deletingSiteId = siteId;
+                    document.getElementById('delete-site-name').textContent = siteName;
+                    deleteSiteModal.show();
+                });
+            });
+            
+            confirmDeleteBtn.addEventListener('click', function() {
+                if (!deletingSiteId) return;
+                
+                fetch(`/delete_site/${deletingSiteId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('成功', '站点删除成功', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showToast('错误', data.msg || '删除失败', 'danger');
+                    }
+                    deleteSiteModal.hide();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('错误', '删除请求失败', 'danger');
+                    deleteSiteModal.hide();
+                });
+            });
+            
+            // 切换站点发布状态
+            const togglePublishStatusBtns = document.querySelectorAll('.toggle-publish-status');
+            
+            togglePublishStatusBtns.forEach(btn => {
+                btn.addEventListener('change', function() {
+                    const siteId = this.dataset.siteId;
+                    const isChecked = this.checked;
+                    const label = this.parentElement.querySelector('.publish-status-label');
+                    
+                    // 禁用开关，防止重复点击
+                    this.disabled = true;
+                    
+                    fetch(`/toggle_site_publish_status/${siteId}`, {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 更新标签
+                            if (data.is_published) {
+                                label.textContent = '已发布';
+                                label.classList.remove('text-secondary');
+                                label.classList.add('text-success');
+                            } else {
+                                label.textContent = '未发布';
+                                label.classList.remove('text-success');
+                                label.classList.add('text-secondary');
+                            }
+                            
+                            showToast('成功', data.msg, 'success');
+                        } else {
+                            // 恢复开关状态
+                            this.checked = !isChecked;
+                            showToast('错误', data.msg || '操作失败', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // 恢复开关状态
+                        this.checked = !isChecked;
+                        showToast('错误', '请求失败', 'danger');
+                    })
+                    .finally(() => {
+                        // 重新启用开关
+                        this.disabled = false;
+                    });
+                });
+            });
+            
+            // 修改密码
+            const changePasswordForm = document.getElementById('change-password-form');
+            
+            changePasswordForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const currentPassword = document.getElementById('current-password').value;
+                const newPassword = document.getElementById('new-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                
+                if (newPassword !== confirmPassword) {
+                    showToast('错误', '两次输入的新密码不一致', 'danger');
+                    return;
+                }
+                
+                fetch('/auth/change_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('成功', '密码修改成功', 'success');
+                        changePasswordForm.reset();
+                    } else {
+                        showToast('错误', data.msg || '密码修改失败', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('错误', '请求失败', 'danger');
+                });
+            });
+            
+            // 提示框功能
+            function showToast(title, message, type = 'info') {
+                const toast = document.getElementById('toast');
+                const toastTitle = document.getElementById('toast-title');
+                const toastMessage = document.getElementById('toast-message');
+                
+                // 设置内容
+                toastTitle.textContent = title;
+                toastMessage.textContent = message;
+                
+                // 设置类型样式
+                toast.className = 'toast';
+                toast.classList.add(`text-bg-${type}`);
+                
+                // 显示提示框
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+            }
+        });
+    </script>
+</body>
+</html> 

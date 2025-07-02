@@ -1,6 +1,6 @@
 [project]
 name = "html_hoster"
-version = "0.3.0"
+version = "0.4.0"
 description = "一个简单优雅的静态网站托管平台，支持快速部署 HTML 网站到阿里云 OSS"
 readme = "README.md"
 license = {text = "MIT"}
@@ -34,6 +34,9 @@ dependencies = [
     "mysqlclient>=2.2.0",
     "pymysql>=1.1.0",
     "boto3>=1.28.0",
+    "supabase>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "pydantic-settings>=2.10.1",
 ]
 
 [project.optional-dependencies]
@@ -72,6 +75,10 @@ index-url = "https://mirrors.cloud.tencent.com/pypi/simple/"
 extra-index-url = [
     "https://mirrors.aliyun.com/pypi/simple/",
 ]
+
+[[tool.uv.index]]
+url = "http://mirrors.aliyun.com/pypi/simple/"
+default = true
 
 [tool.black]
 line-length = 88

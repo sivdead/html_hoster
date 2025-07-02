@@ -9,9 +9,9 @@
 ## ✨ 特性
 
 - 🚀 **快速部署** - 支持 ZIP 文件上传和 HTML 代码粘贴
-- 🌐 **云端托管** - 支持阿里云 OSS 和 S3 兼容的对象存储服务
+- 🌐 **云端托管** - 支持阿里云 OSS、S3 兼容的对象存储服务和 Supabase 存储
 - 🎨 **现代化 UI** - 响应式设计，支持移动端
-- 💾 **数据持久化** - 支持 SQLite 和 MySQL 数据库
+- 💾 **数据持久化** - 支持 SQLite、MySQL 和 Supabase PostgreSQL 数据库
 - 🔧 **易于管理** - 支持站点重命名和删除
 - 📊 **API 支持** - RESTful API 接口
 
@@ -19,15 +19,15 @@
 
 - **后端**: Python 3.10+, Flask, SQLAlchemy
 - **前端**: HTML5, CSS3, JavaScript (原生)
-- **存储**: 阿里云 OSS, AWS S3, MinIO 等 S3 兼容存储
-- **数据库**: SQLite 或 MySQL
+- **存储**: 阿里云 OSS, AWS S3, MinIO, Supabase Storage
+- **数据库**: SQLite, MySQL 或 Supabase PostgreSQL
 - **服务器**: Waitress (生产环境)
 - **容器化**: Docker
 
 ## 📋 环境要求
 
 - Python 3.10 或更高版本
-- 阿里云 OSS 账号和配置
+- 阿里云 OSS 账号和配置（或 S3 兼容存储，或 Supabase 账号）
 - Docker (可选，用于容器化部署)
 
 ## 🚀 快速开始
@@ -63,7 +63,7 @@ uv sync --extra dev
 # 服务器配置
 SERVER_WORKERS=4
 
-# 数据库配置 (sqlite 或 mysql)
+# 数据库配置 (sqlite, mysql 或 supabase)
 DB_TYPE=sqlite
 
 # MySQL 数据库配置 (当 DB_TYPE=mysql 时使用)
@@ -73,7 +73,15 @@ DB_TYPE=sqlite
 # MYSQL_PASSWORD=password
 # MYSQL_DB=html_hoster
 
-# 存储服务类型 (oss 或 s3)
+# Supabase PostgreSQL 数据库配置 (当 DB_TYPE=supabase 时使用)
+# SUPABASE_DB_HOST=db.example.supabase.co
+# SUPABASE_DB_PORT=5432
+# SUPABASE_DB_USER=postgres
+# SUPABASE_DB_PASSWORD=your_password
+# SUPABASE_DB_NAME=postgres
+# SUPABASE_DB_SCHEMA=public
+
+# 存储服务类型 (oss, s3 或 supabase)
 STORAGE_TYPE=oss
 
 # 阿里云 OSS 配置 (当 STORAGE_TYPE=oss 时使用)
@@ -91,6 +99,12 @@ OSS_PREFIX=html_hoster/sites
 # S3_BUCKET_NAME=your_bucket_name
 # S3_PREFIX=html_hoster/sites
 # S3_USE_SSL=true
+
+# Supabase 存储配置 (当 STORAGE_TYPE=supabase 时使用)
+# SUPABASE_URL=https://your-project-id.supabase.co
+# SUPABASE_KEY=your_supabase_key
+# SUPABASE_BUCKET_NAME=html-sites
+# SUPABASE_PREFIX=sites
 ```
 
 ### 4. 运行应用
@@ -156,6 +170,26 @@ docker run -d \
   -e S3_ENDPOINT_URL=https://s3.amazonaws.com \
   -e S3_REGION_NAME=us-east-1 \
   -e S3_BUCKET_NAME=your_bucket \
+  -v $(pwd)/uploads:/app/uploads \
+  html_hoster
+```
+
+使用 Supabase 数据库和存储:
+
+```bash
+docker run -d \
+  --name html_hoster \
+  -p 5000:5000 \
+  -e DB_TYPE=supabase \
+  -e SUPABASE_DB_HOST=db.example.supabase.co \
+  -e SUPABASE_DB_PORT=5432 \
+  -e SUPABASE_DB_USER=postgres \
+  -e SUPABASE_DB_PASSWORD=your_password \
+  -e SUPABASE_DB_NAME=postgres \
+  -e STORAGE_TYPE=supabase \
+  -e SUPABASE_URL=https://your-project-id.supabase.co \
+  -e SUPABASE_KEY=your_supabase_key \
+  -e SUPABASE_BUCKET_NAME=html-sites \
   -v $(pwd)/uploads:/app/uploads \
   html_hoster
 ```
