@@ -105,6 +105,10 @@ OSS_PREFIX=html_hoster/sites
 # SUPABASE_KEY=your_supabase_key
 # SUPABASE_BUCKET_NAME=html-sites
 # SUPABASE_PREFIX=sites
+
+# Executor 配置
+EXECUTOR_TYPE=thread
+EXECUTOR_MAX_WORKERS=4
 ```
 
 ### 4. 运行应用
@@ -195,6 +199,43 @@ docker run -d \
 ```
 
 ## 📚 使用说明
+
+### 数据库迁移
+
+项目集成了 Flask-Migrate 用于数据库迁移管理，可以轻松处理数据库结构变更：
+
+```bash
+# 初始化数据库迁移环境（首次使用）
+python -m html_hoster db init
+
+# 创建迁移脚本（每次修改数据库模型后）
+python -m html_hoster db migrate -m "描述变更"
+
+# 应用迁移更新数据库结构
+python -m html_hoster db upgrade
+
+# 回滚到上一个版本
+python -m html_hoster db downgrade
+
+# 查看迁移历史
+python -m html_hoster db history
+
+# 查看当前数据库版本
+python -m html_hoster db current
+```
+
+也可以使用快捷命令：
+
+```bash
+# 首次初始化
+db-migrate init
+
+# 创建迁移脚本
+db-migrate migrate -m "描述变更"
+
+# 应用迁移
+db-migrate upgrade
+```
 
 ### 上传 ZIP 文件
 

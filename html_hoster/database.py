@@ -6,9 +6,12 @@ import logging
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
+from flask_migrate import Migrate
 
 # 初始化 SQLAlchemy 对象
 db = SQLAlchemy()
+# 初始化 Migrate 对象
+migrate = Migrate()
 
 
 def init_db(app: Flask):
@@ -29,15 +32,20 @@ def init_db(app: Flask):
     # 初始化数据库
     db.init_app(app)
     
+    # 初始化数据库迁移
+    migrate.init_app(app, db)
+    
     # 在应用上下文中创建所有表
     with app.app_context():
-        db.create_all()
         if db_type == "mysql":
             logging.info(f"MySQL 数据库初始化完成: {app.config['MYSQL_HOST']}:{app.config['MYSQL_PORT']}/{app.config['MYSQL_DB']}")
         elif db_type == "supabase":
             logging.info(f"Supabase PostgreSQL 数据库初始化完成: {app.config['SUPABASE_DB_HOST']}:{app.config['SUPABASE_DB_PORT']}/{app.config['SUPABASE_DB_NAME']}")
         else:
             logging.info(f"SQLite 数据库初始化完成: {app.config['SQLITE_DB_PATH']}")
+        
+        # 注意：migrate 初始化后不需要再调用 db.create_all()
+        # 通过 flask db migrate 和 flask db upgrade 命令管理数据库结构
 
 
 # 用户模型
@@ -78,6 +86,10 @@ class Site(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     description = db.Column(db.Text, nullable=True)
     is_published = db.Column(db.Boolean, default=True)
+    # 添加状态字段，默认为 pending
+    status = db.Column(db.String(20), default="pending")
+    # 添加错误信息字段
+    error_message = db.Column(db.Text, nullable=True)
     
     # 外键关联用户
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -94,5 +106,7 @@ class Site(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "description": self.description,
             "is_published": self.is_published,
-            "user_id": self.user_id
+            "user_id": self.user_id,
+            "status": self.status,
+            "error_message": self.error_message
         } 

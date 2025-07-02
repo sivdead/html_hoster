@@ -1,6 +1,6 @@
 [project]
 name = "html_hoster"
-version = "0.4.0"
+version = "0.6.0"
 description = "一个简单优雅的静态网站托管平台，支持快速部署 HTML 网站到阿里云 OSS"
 readme = "README.md"
 license = {text = "MIT"}
@@ -37,6 +37,8 @@ dependencies = [
     "supabase>=2.0.0",
     "psycopg2-binary>=2.9.0",
     "pydantic-settings>=2.10.1",
+    "flask-executor>=1.0.0",
+    "Flask-Migrate>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -56,6 +58,7 @@ Documentation = "https://github.com/sivdead/html_hoster/wiki"
 
 [project.scripts]
 html-hoster = "html_hoster.__main__:main"
+db-migrate = "html_hoster.migrations:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

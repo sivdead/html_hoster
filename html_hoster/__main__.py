@@ -1,12 +1,15 @@
 import os
+import sys
 import logging
+import argparse
 from flask import Flask, render_template
 import pymysql
-from html_hoster.database import db, init_db
+from html_hoster.database import db, init_db, migrate
 from html_hoster.auth import init_auth
 from html_hoster.views import main_bp, site_bp
 from html_hoster.auth_views import auth_bp
 from html_hoster.config import get_config
+from html_hoster.tasks import init_executor
 
 # 加载配置
 config = get_config()
@@ -47,6 +50,9 @@ def create_app():
     # 初始化身份验证模块
     init_auth(app)
     
+    # 初始化 Flask-Executor
+    init_executor(app)
+    
     # 注册错误处理器
     register_error_handlers(app)
     
@@ -82,23 +88,79 @@ def register_error_handlers(app):
                              error_detail="服务器遇到了一个错误，请稍后再试"), 500
 
 
+def run_db_migrations(command, message=None, revision=None):
+    """运行数据库迁移命令"""
+    app = create_app()
+    with app.app_context():
+        from flask_migrate import init, migrate, upgrade, downgrade, current, history
+        
+        if command == "init":
+            logging.info("初始化数据库迁移环境...")
+            init(directory="migrations")
+            logging.info("数据库迁移环境初始化完成")
+            
+        elif command == "migrate":
+            logging.info("创建数据库迁移脚本...")
+            migrate(message=message)
+            logging.info("数据库迁移脚本创建完成")
+            
+        elif command == "upgrade":
+            rev = revision if revision else "head"
+            logging.info(f"升级数据库到版本: {rev}")
+            upgrade(revision=rev)
+            logging.info("数据库升级完成")
+            
+        elif command == "downgrade":
+            rev = revision if revision else "-1"
+            logging.info(f"回滚数据库到版本: {rev}")
+            downgrade(revision=rev)
+            logging.info("数据库回滚完成")
+            
+        elif command == "history":
+            logging.info("数据库迁移历史:")
+            history()
+            
+        elif command == "current":
+            logging.info("当前数据库版本:")
+            current(verbose=True)
+
+
 def main():
     """应用入口点"""
+    parser = argparse.ArgumentParser(description='HTML Hoster - 静态网站托管平台')
+    subparsers = parser.add_subparsers(dest='command', help='子命令')
+    
+    # 服务器命令
+    server_parser = subparsers.add_parser('serve', help='启动 Web 服务器')
+    
+    # 数据库迁移命令
+    db_parser = subparsers.add_parser('db', help='数据库迁移管理')
+    db_parser.add_argument('action', choices=['init', 'migrate', 'upgrade', 'downgrade', 'history', 'current'],
+                          help='数据库迁移操作')
+    db_parser.add_argument('--message', '-m', help='迁移消息描述')
+    db_parser.add_argument('--revision', '-r', help='指定迁移版本')
+    
+    args = parser.parse_args()
+    
     try:
-        # 创建应用
-        app = create_app()
-        
-        # 启动服务器
-        from waitress import serve
-        server_host = app.config["SERVER_HOST"]
-        server_port = app.config["SERVER_PORT"]
-        server_workers = app.config["SERVER_WORKERS"]
-        logging.info(f"启动服务器，主机: {server_host}, 端口: {server_port}, 工作进程数: {server_workers}")
-        serve(app, host=server_host, port=server_port, threads=server_workers)
+        if args.command == 'db':
+            # 运行数据库迁移命令
+            run_db_migrations(args.action, args.message, args.revision)
+        else:
+            # 默认启动服务器
+            app = create_app()
+            # 启动服务器
+            from waitress import serve
+            server_host = app.config["SERVER_HOST"]
+            server_port = app.config["SERVER_PORT"]
+            server_workers = app.config["SERVER_WORKERS"]
+            logging.info(f"启动服务器，主机: {server_host}, 端口: {server_port}, 工作进程数: {server_workers}")
+            serve(app, host=server_host, port=server_port, threads=server_workers)
     except Exception as e:
-        logging.error(f"启动服务器失败: {e}")
+        logging.error(f"执行命令失败: {e}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
