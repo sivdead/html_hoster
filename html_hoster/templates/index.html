@@ -354,10 +354,13 @@
                 });
             });
             
+            // 注释掉这部分代码，因为我们已经在ui.js中添加了更完善的处理
+            /*
             // 当预览模态框关闭时清空iframe内容，防止继续加载和播放音频/视频
             document.getElementById('preview-site-modal').addEventListener('hidden.bs.modal', function () {
                 previewIframe.src = '';
             });
+            */
             
             confirmDeleteBtn.addEventListener('click', function() {
                 if (!currentSiteId) return;

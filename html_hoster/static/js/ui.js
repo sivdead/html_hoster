@@ -263,10 +263,43 @@ function initFileUploadForm() {
     });
 }
 
+/**
+ * 清理模态框遮罩和相关样式
+ * 用于解决模态框关闭后遮罩没有正确移除的问题
+ */
+function cleanupModalBackdrop() {
+    // 移除所有模态框遮罩
+    const modalBackdrops = document.querySelectorAll('.modal-backdrop');
+    modalBackdrops.forEach(backdrop => {
+        backdrop.remove();
+    });
+    
+    // 移除body上的modal-open类和样式
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
     initDragAndDrop();
     initFileUploadForm();
+    
+    // 为所有模态框添加关闭事件监听器，确保清理遮罩
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('hidden.bs.modal', function() {
+            // 如果是预览模态框，清空iframe内容
+            if (this.id === 'preview-site-modal') {
+                const previewIframe = document.getElementById('preview-iframe');
+                if (previewIframe) {
+                    previewIframe.src = '';
+                }
+            }
+            
+            // 清理遮罩和样式
+            cleanupModalBackdrop();
+        });
+    });
     
     // 为表单添加加载状态
     const forms = document.querySelectorAll('form');
